@@ -4,6 +4,8 @@ import theano.tensor as T
 from pegpy.peg import *
 import os
 
+theano.config.optimizer='fast_compile'
+
 # Numpyの設定
 np.random.seed(100)
 upper = -.002
@@ -34,6 +36,7 @@ class VectorTree(object):
         , "positionInSiblings"
         , "tag"
         , "child"
+        , "isnegativesample"
     ]
 
     def __init__(self):
@@ -41,6 +44,7 @@ class VectorTree(object):
         self.positionInSiblings = 0
         self.tag = None
         self.child = []
+        self.isnegativesample = False
 
     def __len__(self):
         return len(self.child)
@@ -76,12 +80,8 @@ grammar = Grammar("x")
 grammar.load(os.path.dirname(os.path.abspath(__file__)) + "/test_grammar/math.tpeg")
 parser = nez(grammar)
 # tagのマップを作る
-tagList = ["Infix", " ", "Int","Plus","Mul"]#grammar.tagAll()
-initTagMap = {}
-for tag in tagList:
-    initTagMap[tag] = np.random.rand(feature_dimension)
-tagMap = [initTagMap, initTagMap]
-
+tag2idx = {"Infix" : np.array([0,0,0,0,1]), " " : np.array([0,0,0,1,0]), "Int" : np.array([0,0,1,0,0]),"Plus" : np.array([0,1,0,0,0]),"Mul" : np.array([1,0,0,0,0])}
+tag2vec = theano.shared(np.random.rand(feature_dimension,len(tag2idx)),name='tag2vec', borrow = True)
 ## Training Data
 fin = open(os.path.dirname(os.path.abspath(__file__)) + "/expressions.txt")
 progs = fin.readlines()
@@ -94,18 +94,28 @@ Wleft = theano.shared(np.random.uniform(low=lower,high=upper,size=(feature_dimen
 Wright = theano.shared(np.random.uniform(low=lower,high=upper,size=(feature_dimension,feature_dimension)), name = "wright", borrow=True)
 biase = theano.shared(np.random.uniform(low=lower,high=upper,size=feature_dimension), name = "biase", borrow = True)
 
-def mulLandW(node, nodevector):
+def getVec(tagname):
+    return T.dot(tag2vec, tag2idx[tagname])
+
+def mulLandW(node):
     n = node.numberOfSiblings
     l = node.numberOfLeaf()
-    if n == 0:# Unary tree だった場合
-        Weight = 0.5 * l * Wleft + 0.5 * l * Wright # simbol expression
-        return T.dot(Weight, nodevector)
+    
+    def ret(nodevector):
+        if n == 0:# Unary tree だった場合
+            Weight = 0.5 * l * Wleft + 0.5 * l * Wright # simbol expression
+            return T.dot(Weight, nodevector)
+        else:
+            i = float(node.positionInSiblings)
+            eta_l = (n - i) / n
+            eta_r = i / n
+            Weight = eta_l * l * Wleft + eta_r * l * Wright# simbol expression
+            return T.dot(Weight, nodevector)
+
+    if node.isnegativesample:
+        return ret(theano.shared(np.random.uniform(low=lower,high=upper,size=(feature_dimension))))
     else:
-        i = float(node.positionInSiblings)
-        eta_l = (n - i) / n
-        eta_r = i / n
-        Weight = eta_l * l * Wleft + eta_r * l * Wright# simbol expression
-        return T.dot(Weight, nodevector)
+        return ret(getVec(node.tag))
 
 # error function for a vector tree
 def j(vecTree):
@@ -113,29 +123,19 @@ def j(vecTree):
         return 0.0
     else:
         # for positive
-        currentVector = tagMap[0][vecTree.tag]
+        currentVector = getVec(vecTree.tag)
         numOLeafs = vecTree.numberOfLeaf()
-        mlw = [mulLandW(ch, tagMap[0][ch.tag]) for ch in vecTree.child] # simbol expression
+        mlw = [mulLandW(ch) for ch in vecTree.child] # simbol expression
         nextVector = T.tanh((1.0/numOLeafs) * T.sum(mlw) + biase)
-        '''
-        Eval NextVector w.r.t. the current model parameters
-        and update a new code for tagMap[1]
-        '''
-        evalNextVector = theano.function([], nextVector)
-        tagMap[1][vecTree.tag] = evalNextVector()
         d_positive = (currentVector - nextVector).norm(L=2)
-        '''
-        Done
-        '''
         #for negative
         negNodeIndex = np.random.randint(0,len(vecTree))
         if negNodeIndex == len(vecTree):
             d_negative = (np.random.rand(feature_dimension) - nextVector).norm(L=2)
         else:
-            child_neg = vecTree.child
-            child_neg[negNodeIndex].tag = "negative" # negative sample を示すタグに書き換え
-            tagMap[0]["negative"] = np.random.uniform(low=lower,high=upper,size=feature_dimension)# negative sampleの値を更新
-            neglw = [mulLandW(ch, tagMap[0][ch.tag]) for ch in child_neg] # simbol expresison
+            vecTree.child[negNodeIndex].isnegativesample = True ##あとでFasleに戻すことを忘れない
+            neglw = [mulLandW(ch) for ch in vecTree.child] # simbol expresison
+            vecTree.child[negNodeIndex].isnegativesample = False ## 戻した
             nextVector_neg = T.tanh((1 / numOLeafs ) * T.sum(neglw) + biase)
             d_negative = (currentVector - nextVector_neg).norm(L=2)
         er = margin + d_positive - d_negative
@@ -154,20 +154,25 @@ TRAIN_EPOCH = 1
 for epoch in range(TRAIN_EPOCH):
     np.random.shuffle(trainData)
     current_cost = 0.0
+    samplecount = 0
     for datum in trainData:
-        djdWleft = T.grad(cost = theano.gradient.grad_clip(objective(datum), -1, 1) , wrt = Wleft)
+        djdWleft = T.grad(cost = objective(datum), wrt = Wleft)
         print('left')
         print(djdWleft.eval())
-        djdWright = T.grad(cost = theano.gradient.grad_clip(objective(datum), -1, 1) , wrt = Wright)
+        djdWright = T.grad(cost = objective(datum), wrt = Wright)
         print('right')
         print(djdWright.eval())
-        djdbiase = T.grad(cost = theano.gradient.grad_clip(objective(datum), -1, 1) , wrt = biase)
+        djdbiase = T.grad(cost = objective(datum), wrt = biase)
         print('biase')
         print(djdbiase.eval())
-        #djdtheta = T.grad(cost=objective(datum),wrt=theta)
-        updates = [(Wleft, Wleft - learnRate * djdWleft), (Wright, Wright - learnRate * djdWright), (biase, biase - learnRate * djdbiase)]
+        djdtag2vec = T.grad(cost= objective(datum), wrt= tag2vec)
+        print('tag2vec')
+        print(djdtag2vec.eval())
+        updates = [(Wleft, Wleft - learnRate * djdWleft)
+                 , (Wright, Wright - learnRate * djdWright)
+                 , (biase, biase - learnRate * djdbiase)
+                 , (tag2vec, tag2vec - learnRate * djdtag2vec)]
         train_model = theano.function(inputs=[],outputs=objective(datum), updates=updates)
         current_cost = train_model()
-        print(str(current_cost))
-    tagMap[0] = tagMap[1] ## tagmapの更新
-    print(str(epoch) + str(current_cost))
+        print('samplecount:' + str(samplecount) + 'current_coust:' + str(current_cost))
+    print('epoch:' + str(epoch) + 'samlecount:' + str(samplecount) +'current_cost:' + str(current_cost))
