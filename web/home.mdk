@@ -1,28 +1,29 @@
 [INCLUDE=bootstrap]
 Title      : Bootstrap demo document
-Theme      : darkly
+Theme      : simplex
 Css        : nav-example.css
 Col        { .col-lg-4 }
 
 ~ Begin Container
 ~ Masthead
 
-### Project name {.text-muted}
+### Pegpy {.text-muted}
 
 * {.active} [Home](#)
-* [Projects](http://rise4fun.com)
-* [Services](#)
-* [Downloads](#)
-* [About](#)
-* [Contact](#)
+* [Demo](http://rise4fun.com)
+* [Developers](#)
+* [Contributors](#)
+* [Documents](#)
+* [GitHub](https://github.com/KuramitsuLab/pegpy)
 {.nav; .nav-justified}
-~ 
+~
 
 ~ Jumbotron
-# A Webpage in Madoko
+# Pegpy
+Trans compiler framework in Python.
 By using the bootstrap framework it is easy to create great looking
 webpages that display well both on Mobile and Desktop platforms.
-In madoko, we can directly use any standard bootstrap class names, 
+In madoko, we can directly use any standard bootstrap class names,
 like `Jumbotron` as a custom block!
 {.lead}
 
@@ -32,10 +33,10 @@ like `Jumbotron` as a custom block!
 <!-- Example row of columns -->
 ~ Begin Row
 ~ Col
-## Safari bug warning! 
+## Safari bug warning!
 As of v7.0.1, Safari exhibits a bug in which resizing your browser
 horizontally causes rendering errors in the justified nav that are
-cleared upon refreshing. 
+cleared upon refreshing.
 {.text-danger}
 
 Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas
@@ -66,7 +67,7 @@ fermentum massa. type here. which is amazing.\
 ~ End Row
 
 ~ Footer
-&copy; Company 2014
+&copy; Kuramitsu Laboratory 2019
 ~
 
 ~ End Container
