@@ -1,0 +1,97 @@
+[INCLUDE=bootstrap]
+Title      : Bootstrap demo document
+Theme      : simplex
+Css        : nav-example.css
+Col        { .col-lg-4 }
+
+~ Begin Container
+~ Masthead
+
+### Pegpy {.text-muted}
+
+* {.active} [Home](#)
+* [Demo](http://rise4fun.com)
+* [Developers](#)
+* [Documents](#)
+* [GitHub](https://github.com/KuramitsuLab/pegpy)
+{.nav; .nav-justified}
+~
+
+~ Jumbotron
+# Pegpy
+Pegpy is a system that simplifies processing source code and text data on Python.
+Its users can declaratively describe the syntax and then use generated tools to parse, translate, and format.
+{.lead}
+~
+
+## Easy to start
+### Get Pegpy via `pip3` command
+```
+$ pip3 install git+https://github.com/KuramitsuLab/pegpy.git
+```
+### Run `pegpy` command
+```
+$ pegpy parse -g math.tpeg 1+2*3
+Expression = Product (left:^ { name: { [+-] } right: Product #Infix })*
+Product = Value (left:^ { name: { [*%/] } right: Value #Infix })*
+Value = Int / '(' Expression ')'
+Int = { [0-9]+ #Int }
+OK Expression => [#Infix left=[#Infix left=[#Int '1'] name=[# '*'] right=[#Int '2']] name=[# '+'] right=[#Int '3']]
+OK Expression => [#Infix left=[#Int '1'] name=[# '+'] right=[#Infix left=[#Int '2'] name=[# '*'] right=[#Int '3']]]
+OK Int => [#Int '123']
+
+[#Infix left=[#Int '1'] name=[# '+'] right=[#Infix left=[#Int '2'] name=[# '*'] right=[#Int '3']]]
+```
+
+The above example shows pegpy parses a arithmetic expression `1+2*3` with the syntax description `math.tpeg`, and returns a syntax tree shown in the last line.
+
+### TPEG files
+If you want to parse another text data or source code, change the syntax description designated with `-g` option.
+There are **over 20 kinds** of syntax description available as predefined [tpeg_files](https://github.com/KuramitsuLab/pegpy/tree/master/pegpy/grammar).
+If you cannot find a tpeg file which describe the syntax you'd like, this is the chance to write your tpeg file!
+
+[Learn TPEG](http://getbootstrap.com/css/){.btn; .btn-success; html-role:button}
+
+### Pegpy commands
+If you want to perform another operation to source code or text data, you can replace the `parse` command with the followings.
+
+<!-- Example row of columns -->
+~ Begin Row
+~ Col
+## `nezcc` : Closs-language Parser
+Under development
+{.text-danger}
+
+Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas
+eget quam. Vestibulum id ligula porta felis euismod semper. Fusce
+dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut
+fermentum massa.\
+[View details &raquo;](#){.btn; .btn-primary; html-role:button}
+~
+
+~ Col
+## `origami` : Trans-compiler
+Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas
+eget quam. Vestibulum id ligula porta felis euismod semper. Fusce
+dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut
+fermentum massa.\
+[View details &raquo;](#){.btn; .btn-primary; html-role:button}
+~
+
+~ Col
+## `json` : Printer to JSON
+Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas
+eget quam. Vestibulum id ligula porta felis euismod semper. Fusce
+dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut
+fermentum massa. type here. which is amazing.\
+[View details &raquo;](#){.btn; .btn-primary; html-role:button}
+~
+
+~ End Row
+
+~ Footer
+&copy; Kuramitsu Laboratory 2019
+~
+
+~ End Container
+
