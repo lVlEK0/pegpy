@@ -30,8 +30,8 @@ class TestTree2Vec(unittest.TestCase):
             #canotree = self.t2v.ast2canonicalTree(originalTree)
             #kerneltree = self.t2v.canonicalTree2KernelTree(canotree)
             #convtree = self.t2v.tbcnn_layer(canotree)
-            vector = self.t2v.vectorRepresentation(originalTree,convolutionTimes=1)
-            print(vector.eval())
+            vector = self.t2v.vectorRepresentation(originalTree,convolutionTimes=3)
+            print(vector)
     
     def tearDown(self):
         del self.parsetrees
